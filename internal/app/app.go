@@ -21,8 +21,19 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	if _, err := ffmpeg.LookPath("ffprobe"); err != nil {
 		return err
 	}
+
+	// Optional ImageMagick fallback
+	if _, err := ffmpeg.LookPath("magick"); err == nil {
+		cfg.MagickBin = "magick"
+	} else if _, err := ffmpeg.LookPath("convert"); err == nil {
+		cfg.MagickBin = "convert"
+	}
+
 	if cfg.Verbose {
 		fmt.Println("[gif2vid] ffmpeg/ffprobe found in PATH")
+		if cfg.MagickBin != "" {
+			fmt.Printf("[gif2vid] ImageMagick found: %s\n", cfg.MagickBin)
+		}
 	}
 
 	// Validate inputs

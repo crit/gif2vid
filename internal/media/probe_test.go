@@ -6,6 +6,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/crit/gif2vid/internal/config"
 	"github.com/crit/gif2vid/internal/ffmpeg"
 )
 
@@ -20,6 +21,7 @@ func (m *mockRunner) Run(ctx context.Context, name string, args []string) ([]byt
 
 func TestProbe(t *testing.T) {
 	ctx := context.Background()
+	cfg := &config.Config{}
 
 	t.Run("success video stream", func(t *testing.T) {
 		mr := &mockRunner{
@@ -37,7 +39,7 @@ func TestProbe(t *testing.T) {
 				return b, nil, nil
 			},
 		}
-		w, h, err := Probe(ctx, mr, "test.gif")
+		w, h, err := Probe(ctx, mr, cfg, "test.gif")
 		if err != nil {
 			t.Fatalf("Probe failed: %v", err)
 		}
@@ -47,10 +49,6 @@ func TestProbe(t *testing.T) {
 	})
 
 	t.Run("success image stream", func(t *testing.T) {
-		// This test case simulates what happens when ffprobe returns an image stream.
-		// Currently it might work because of the broad check in the loop,
-		// but let's see if the -select_streams v:0 prevents it in real ffprobe.
-		// In this mock, we only control what the runner returns.
 		mr := &mockRunner{
 			mockRun: func(ctx context.Context, name string, args []string) ([]byte, []byte, error) {
 				res := ProbeResult{
@@ -66,7 +64,7 @@ func TestProbe(t *testing.T) {
 				return b, nil, nil
 			},
 		}
-		w, h, err := Probe(ctx, mr, "test.webp")
+		w, h, err := Probe(ctx, mr, cfg, "test.webp")
 		if err != nil {
 			t.Fatalf("Probe failed: %v", err)
 		}
@@ -78,6 +76,9 @@ func TestProbe(t *testing.T) {
 	t.Run("no streams", func(t *testing.T) {
 		mr := &mockRunner{
 			mockRun: func(ctx context.Context, name string, args []string) ([]byte, []byte, error) {
+				if name == "ffmpeg" {
+					return nil, nil, errors.New("fail")
+				}
 				res := ProbeResult{
 					Streams: []struct {
 						CodecType string `json:"codec_type"`
@@ -89,7 +90,7 @@ func TestProbe(t *testing.T) {
 				return b, nil, nil
 			},
 		}
-		_, _, err := Probe(ctx, mr, "test.gif")
+		_, _, err := Probe(ctx, mr, cfg, "test.gif")
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -120,7 +121,7 @@ func TestProbe(t *testing.T) {
 				return b, nil, nil
 			},
 		}
-		w, h, err := Probe(ctx, mr, "test.gif")
+		w, h, err := Probe(ctx, mr, cfg, "test.gif")
 		if err != nil {
 			t.Fatalf("Probe failed: %v", err)
 		}
@@ -153,12 +154,31 @@ func TestProbe(t *testing.T) {
 				return nil, []byte("some error"), errors.New("failed")
 			},
 		}
-		w, h, err := Probe(ctx, mr, "test.gif")
+		w, h, err := Probe(ctx, mr, cfg, "test.gif")
 		if err != nil {
 			t.Fatalf("Probe failed: %v", err)
 		}
 		if w != 500 || h != 600 {
 			t.Errorf("got %dx%d, want 500x600", w, h)
+		}
+	})
+
+	t.Run("magick fallback", func(t *testing.T) {
+		magickCfg := &config.Config{MagickBin: "magick"}
+		mr := &mockRunner{
+			mockRun: func(ctx context.Context, name string, args []string) ([]byte, []byte, error) {
+				if name == "magick" {
+					return []byte("123 456"), nil, nil
+				}
+				return nil, nil, errors.New("fail all others")
+			},
+		}
+		w, h, err := Probe(ctx, mr, magickCfg, "test.webp")
+		if err != nil {
+			t.Fatalf("Probe failed: %v", err)
+		}
+		if w != 123 || h != 456 {
+			t.Errorf("got %dx%d, want 123x456", w, h)
 		}
 	})
 }

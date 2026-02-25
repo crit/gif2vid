@@ -20,6 +20,7 @@ type Config struct {
 	Concurrency int
 	InputDir    string
 	Inputs      []string
+	MagickBin   string // "magick" or "convert" if found
 }
 
 // AddFlags defines CLI flags on the provided FlagSet and returns a pointer to Config.

@@ -32,7 +32,7 @@ func Run(ctx context.Context, r ffmpeg.Runner, cfg *config.Config) error {
 	// Probe inputs and compute target canvas
 	maxW, maxH := 0, 0
 	for _, in := range cfg.Inputs {
-		w, h, err := media.Probe(ctx, r, in)
+		w, h, err := media.Probe(ctx, r, cfg, in)
 		if err != nil {
 			return err
 		}
@@ -98,6 +98,13 @@ func Run(ctx context.Context, r ffmpeg.Runner, cfg *config.Config) error {
 				}
 				_, stderr, err := r.Run(ctx, "ffmpeg", args)
 				if err != nil {
+					// Fallback to ImageMagick if ffmpeg fails to decode
+					if cfg.MagickBin != "" {
+						if errMagick := decodeWithMagick(ctx, r, cfg, j.input, seg, maxW, maxH); errMagick == nil {
+							segments[j.index] = seg
+							return
+						}
+					}
 					errs <- fmt.Errorf("ffmpeg segment failed for %s:\ncmd: %s\n%s", j.input, ffmpeg.PrettyCmd("ffmpeg", args), string(stderr))
 					return
 				}
@@ -155,5 +162,44 @@ func Run(ctx context.Context, r ffmpeg.Runner, cfg *config.Config) error {
 	} else {
 		fmt.Printf("[gif2vid] temp kept at: %s\n", tmpDir)
 	}
+	return nil
+}
+
+func decodeWithMagick(ctx context.Context, r ffmpeg.Runner, cfg *config.Config, input, output string, targetW, targetH int) error {
+	// 1. Create a temp directory for frames
+	framesDir, err := os.MkdirTemp(cfg.TmpDir, "magick-frames-*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(framesDir)
+
+	// 2. Extract frames using ImageMagick: convert input.webp framesDir/f_%04d.png
+	args := []string{input, filepath.Join(framesDir, "f_%04d.png")}
+	bin := cfg.MagickBin
+	if bin == "magick" {
+		args = append([]string{"convert"}, args...)
+	}
+
+	if _, _, err := r.Run(ctx, bin, args); err != nil {
+		return err
+	}
+
+	// 3. Encode frames using ffmpeg: ffmpeg -f image2 -i framesDir/f_%04d.png ...
+	ffmpegArgs := []string{
+		"-y",
+		"-framerate", fmt.Sprintf("%d", cfg.FPS),
+		"-i", filepath.Join(framesDir, "f_%04d.png"),
+		"-vf", BuildFilter(cfg, targetW, targetH),
+		"-an",
+		"-c:v", "libx264",
+		"-preset", cfg.Preset,
+		"-crf", fmt.Sprintf("%d", cfg.CRF),
+		output,
+	}
+
+	if _, _, err := r.Run(ctx, "ffmpeg", ffmpegArgs); err != nil {
+		return err
+	}
+
 	return nil
 }

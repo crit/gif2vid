@@ -1,10 +1,11 @@
 # gif2vid
 
-`gif2vid` is a Go-based CLI tool that takes a directory of GIF and/or animated WebP files and combines them into a single H.264 MP4 video. It uses `ffmpeg` and `ffprobe` under the hood to handle media processing.
+`gif2vid` is a Go-based CLI tool that takes a directory of GIF and/or animated WebP files and combines them into a single H.264 MP4 video. It uses `ffmpeg` and `ffprobe` under the hood to handle media processing, with optional support for `imagemagick` as a fallback for difficult files.
 
 ## Features
 
 - **Multi-format Support**: Combine GIF and animated WebP files into one video.
+- **Robustness**: Uses ImageMagick as a fallback if FFmpeg/FFprobe cannot decode or probe certain WebP files.
 - **Automatic Sizing**: Automatically calculates the maximum width and height across all input files to create a uniform canvas (rounded up to the nearest even number for H.264 compatibility).
 - **Contain Fit**: Each input is scaled to fit the target dimensions without cropping, with configurable background padding (default: black).
 - **High Compatibility**: Generates H.264 MP4 files with `yuv420p` pixel format and `+faststart` for broad device and web compatibility.
@@ -15,10 +16,11 @@
 
 - **FFmpeg**: Must be installed and available in your `PATH`.
 - **FFprobe**: Must be installed and available in your `PATH`.
+- **ImageMagick (Optional)**: Recommended for better compatibility with some animated WebP files.
 
 On macOS (using Homebrew):
 ```bash
-brew install ffmpeg
+brew install ffmpeg imagemagick
 ```
 
 ## Installation
