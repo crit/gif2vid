@@ -26,7 +26,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	}
 
 	// Validate inputs
-	absInputs, err := inputs.ValidateAndAbs(cfg.Inputs)
+	absInputs, err := inputs.GetFilesFromDir(cfg.InputDir)
 	if err != nil {
 		return err
 	}

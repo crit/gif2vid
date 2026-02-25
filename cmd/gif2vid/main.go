@@ -14,7 +14,7 @@ func main() {
 	fs := flag.NewFlagSet("gif2vid", flag.ExitOnError)
 	cfg := config.AddFlags(fs)
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [flags] <inputs...>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s [flags] <input_directory>\n", os.Args[0])
 		fs.PrintDefaults()
 	}
 	_ = fs.Parse(os.Args[1:])

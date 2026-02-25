@@ -12,30 +12,42 @@ var allowedExt = map[string]bool{
 	".webp": true,
 }
 
-// ValidateAndAbs ensures inputs exist as files and returns absolute cleaned paths.
-func ValidateAndAbs(paths []string) ([]string, error) {
-	if len(paths) == 0 {
-		return nil, fmt.Errorf("no inputs provided")
+// GetFilesFromDir scans the directory for GIF and WebP files and returns absolute cleaned paths.
+func GetFilesFromDir(dirPath string) ([]string, error) {
+	st, err := os.Stat(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("input directory not found: %s", dirPath)
 	}
-	out := make([]string, 0, len(paths))
-	for _, p := range paths {
-		st, err := os.Stat(p)
-		if err != nil {
-			return nil, fmt.Errorf("input not found: %s", p)
+	if !st.IsDir() {
+		return nil, fmt.Errorf("input is not a directory: %s", dirPath)
+	}
+
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read directory: %w", err)
+	}
+
+	var out []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
 		}
-		if !st.Mode().IsRegular() {
-			return nil, fmt.Errorf("input is not a regular file: %s", p)
-		}
-		ext := strings.ToLower(filepath.Ext(p))
+		ext := strings.ToLower(filepath.Ext(entry.Name()))
 		if !allowedExt[ext] {
-			// future: allow-any optional; for now, enforce
-			return nil, fmt.Errorf("unsupported extension %s for %s (allowed: .gif,.webp)", ext, p)
+			continue
 		}
+
+		p := filepath.Join(dirPath, entry.Name())
 		ap, err := filepath.Abs(p)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, filepath.Clean(ap))
 	}
+
+	if len(out) == 0 {
+		return nil, fmt.Errorf("no supported files (.gif, .webp) found in: %s", dirPath)
+	}
+
 	return out, nil
 }

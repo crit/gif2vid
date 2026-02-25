@@ -18,6 +18,7 @@ type Config struct {
 	TmpDir      string
 	Verbose     bool
 	Concurrency int
+	InputDir    string
 	Inputs      []string
 }
 
@@ -39,9 +40,15 @@ func AddFlags(fs *flag.FlagSet) *Config {
 	return cfg
 }
 
-// Finalize validates required flags and attaches positional args as inputs.
+// Finalize validates required flags and attaches the input directory.
 func (c *Config) Finalize(args []string) error {
-	c.Inputs = append(c.Inputs[:0], args...)
+	if len(args) == 0 {
+		return errors.New("input directory is required")
+	}
+	if len(args) > 1 {
+		return errors.New("only one input directory is supported")
+	}
+	c.InputDir = args[0]
 	if c.Output == "" {
 		return errors.New("-o/--output is required")
 	}

@@ -1,6 +1,6 @@
 # gif2vid
 
-`gif2vid` is a Go-based CLI tool that takes a list of GIF and/or animated WebP files and combines them into a single H.264 MP4 video. It uses `ffmpeg` and `ffprobe` under the hood to handle media processing.
+`gif2vid` is a Go-based CLI tool that takes a directory of GIF and/or animated WebP files and combines them into a single H.264 MP4 video. It uses `ffmpeg` and `ffprobe` under the hood to handle media processing.
 
 ## Features
 
@@ -40,26 +40,26 @@ go build -o gif2vid ./cmd/gif2vid
 ## Usage
 
 ```bash
-gif2vid [flags] <inputs...>
+gif2vid [flags] <input_directory>
 ```
 
 ### Examples
 
 **Basic Usage:**
-Combine two GIFs into an output video.
+Combine all GIFs in a directory into an output video.
 ```bash
-gif2vid -o output.mp4 input1.gif input2.gif
+gif2vid -o output.mp4 ./my_gifs
 ```
 
 **Mixed Formats and Custom Settings:**
-Combine GIF and WebP files with a specific frame rate and background color.
+Combine GIF and WebP files from a directory with a specific frame rate and background color.
 ```bash
-gif2vid -o result.mp4 --fps 60 --bg "#1a1a1a" --crf 18 animated.webp sample.gif
+gif2vid -o result.mp4 --fps 60 --bg "#1a1a1a" --crf 18 ./media_dir
 ```
 
 **Overwrite Existing File:**
 ```bash
-gif2vid -o output.mp4 --overwrite input.gif
+gif2vid -o output.mp4 --overwrite ./input_dir
 ```
 
 ### Flags
