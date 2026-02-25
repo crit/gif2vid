@@ -21,8 +21,7 @@ type ProbeResult struct {
 func Probe(ctx context.Context, r ffmpeg.Runner, input string) (int, int, error) {
 	args := []string{
 		"-v", "error",
-		"-select_streams", "v:0",
-		"-show_entries", "stream=width,height",
+		"-show_entries", "stream=width,height,codec_type",
 		"-of", "json",
 		input,
 	}
@@ -35,12 +34,9 @@ func Probe(ctx context.Context, r ffmpeg.Runner, input string) (int, int, error)
 		return 0, 0, fmt.Errorf("ffprobe parse failed for %s: %v\nstdout=%s", input, err, string(stdout))
 	}
 	for _, s := range pr.Streams {
-		if s.CodecType == "video" || s.Width > 0 || s.Height > 0 {
-			if s.Width <= 0 || s.Height <= 0 {
-				break
-			}
+		if s.Width > 0 && s.Height > 0 {
 			return s.Width, s.Height, nil
 		}
 	}
-	return 0, 0, fmt.Errorf("no video stream found in %s", input)
+	return 0, 0, fmt.Errorf("no valid visual stream found in %s", input)
 }
